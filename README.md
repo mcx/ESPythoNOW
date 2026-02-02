@@ -6,6 +6,10 @@ Linux/Python ESP-NOW library.
 * [Stream high quality audio to ESP device](https://github.com/ChuckMash/ESPythoNOW/tree/main/examples/ESPaudioNOW)
 * Supports ESP-NOW v1.0 and v2.0
   * v2.0 supports over 1,400 bytes per message!
+* Supports sending and receiving encrypted ESP-NOW messages!
+* MQTT Subscribe and publish, send and receive ESP-NOW  
+*  **This is a work in progress**
+
 
 
 
@@ -68,15 +72,18 @@ input() # Run until enter is pressed
 
 
 ---
-Receive encrypted ESP-NOW messages
+Receive/Send encrypted ESP-NOW messages
 ---
 ```python
 espnow = ESPythoNow(interface="wlan1", callback=callback, pmk="0u4hgz7pgct3gnv8", lmk="a3o4csuv2bpvr0wu")
 ```
-Note: [Sending encrypted ESP-NOW messages is not currently supported.](https://github.com/ChuckMash/ESPythoNOW/issues/1) 
 
-
-
+---
+MQTT. Work in progress
+---
+```
+python3 ESPythoNOW.py --interface=wlan1 --mqtt_host=192.168.0.10 --mqtt_port=1883 --mqtt_username=test_user --mqtt_password=test_password --mqtt_keepalive=60 --mqtt_raw=false --mqtt_hex=True --mqtt_json=true
+```
 
 ---
 Assorted Details
@@ -156,6 +163,4 @@ NOTE about current state, subject to change or improvements
 * Interface must support monitor mode
 * Any "local" MAC address is supported
   * Only actual local MAC will provide delivery confirmation
-* Supports receiving encrypted messages, does not support sending [yet](https://github.com/ChuckMash/ESPythoNOW/issues/1) 
-
 *  **This is a work in progress**
