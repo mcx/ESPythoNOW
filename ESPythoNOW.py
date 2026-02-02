@@ -57,8 +57,9 @@ class ESPythoNow:
         print("Error! paho-mqtt missing, MQTT can not be enabled.")
         self.use_mqtt = False
       else:
-        self.mqtt_client_id    = "ESPythoNOW-{self.local_hw_mac}"
-        self.mqtt_topic_base   = "ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_client_id    = f"ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_topic_base   = f"ESPythoNOW-{self.local_hw_mac}"
+
         self.mqtt_topic_send   = self.mqtt_topic_base+"/send"
         self.mqtt_broker_ip    = self.mqtt_config.get("ip",        None)
         self.mqtt_broker_port  = self.mqtt_config.get("port",      1883)
