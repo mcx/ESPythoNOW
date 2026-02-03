@@ -94,15 +94,15 @@ class ESPythoNow:
     print(f"Setting {interface} to monitor mode, and channel {channel}")
 
     methods = [
+      [['ip', 'link', 'set', interface, 'down'],
+       ['iw', 'dev', interface, 'set', 'type', 'monitor'],
+       ['iw', 'dev', interface, 'set', 'channel', str(channel)],
+       ['ip', 'link', 'set', interface, 'up']],
+      
       [['ifconfig', interface, 'down'],
        ['iwconfig', interface, 'mode', 'monitor'],
        ['iwconfig', interface, 'channel', str(channel)],
        ['ifconfig', interface, 'up']],
-
-      [['ip', 'link', 'set', interface, 'down'],
-       ['iw', 'dev', interface, 'set', 'type', 'monitor'],
-       ['iw', 'dev', interface, 'set', 'channel', str(channel)],
-       ['ip', 'link', 'set', interface, 'up']]
     ]
 
     for method in methods:
