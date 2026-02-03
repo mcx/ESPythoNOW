@@ -1,8 +1,4 @@
 
-# sudo bash prep.sh *iface* *channel*
-# sudo bash prep.sh wlp1s0 8
-ifconfig $1 down
-iwconfig $1 mode monitor
-ifconfig $1 up
-iwconfig $1 channel $2
-
+iw dev $1 set type monitor
+iw dev $1 set channel $2
+ip link set $1 up
