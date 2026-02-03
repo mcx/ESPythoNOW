@@ -96,8 +96,8 @@ class ESPythoNow:
     methods = [
       [['ifconfig', interface, 'down'],
        ['iwconfig', interface, 'mode', 'monitor'],
-       ['ifconfig', interface, 'up'],
-       ['iwconfig', interface, 'channel', str(channel)]],
+       ['iwconfig', interface, 'channel', str(channel)],
+       ['ifconfig', interface, 'up']],
 
       [['ip', 'link', 'set', interface, 'down'],
        ['iw', 'dev', interface, 'set', 'type', 'monitor'],
