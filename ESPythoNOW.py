@@ -108,6 +108,7 @@ class ESPythoNow:
     for method in methods:
       try:
         for cmd in method:
+          print(cmd)
           subprocess.run(cmd, check=True)
         return
       except:
