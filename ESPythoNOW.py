@@ -6,6 +6,7 @@ import struct
 import sys
 import json
 import re
+import subprocess
 
 try:
   from Crypto.Cipher import AES
@@ -25,8 +26,14 @@ except:
 
 class ESPythoNow:
 
-  def __init__(self, interface, mac="", callback=None, accept_broadcast=True, accept_all=False, accept_ack=False, block_on_send=False, pmk="", lmk="", decoders={}, mqtt_config={}):
+  def __init__(self, interface, set_interface=False, channel=8, mac="", callback=None, accept_broadcast=True, accept_all=False, accept_ack=False, block_on_send=False, pmk="", lmk="", decoders={}, mqtt_config={}):
+
+    if set_interface and channel:
+      self.prep_interface(interface, channel)
+
     self.interface           = interface                                 # Wireless interface to use
+    self.set_interface       = set_interface                             # Set the interface to monitor mode and channel
+    self.wifi_channel        = channel                                   # Wifi Channel to use, if set_interface
     self.local_mac           = mac.upper() if mac else None              # Local ESP-NOW peer MAC, does not need to match actual hw MAC
     self.esp_now_rx_callback = callback                                  # Callback function to execute on packet RX
     self.accept_broadcast    = accept_broadcast                          # Allow incoming ESP-NOW broadcast packets
@@ -80,6 +87,33 @@ class ESPythoNow:
         else:
           self.use_mqtt = True
 
+
+
+  # Experimental. Prepare the interface with monitor mode and channel (replaces prep.sh)
+  def prep_interface(self, interface, channel):
+    print(f"Setting {interface} to monitor mode, and channel {channel}")
+
+    methods = [
+      [['ifconfig', interface, 'down'],
+       ['iwconfig', interface, 'mode', 'monitor'],
+       ['ifconfig', interface, 'up'],
+       ['iwconfig', interface, 'channel', str(channel)]],
+
+      [['ip', 'link', 'set', interface, 'down'],
+       ['iw', 'dev', interface, 'set', 'type', 'monitor'],
+       ['iw', 'dev', interface, 'set', 'channel', str(channel)],
+       ['ip', 'link', 'set', interface, 'up']]
+    ]
+
+    for method in methods:
+      try:
+        for cmd in method:
+          subprocess.run(cmd, check=True)
+        return
+      except:
+        pass
+
+    print("Setting interface failed. Install (net-tools and wireless-tools) or (iproute2 and iw)")
 
 
   # Required tasks prior to sending or receiving
@@ -520,6 +554,8 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='ESPythoNOW: ESP-NOW for Linux!')
 
   parser.add_argument('-i',      '--interface',        required=True,  default="wlan1",         help='Dedicated wireless interface (e.g., wlan1)')
+  parser.add_argument('-c',      '--channel',          required=False, default=None,            help='Wireless channel to use')
+  parser.add_argument('-s',      '--set_interface',    required=False, default=False, type=s2b, help='ESPythoNOW will try and set monitor mode and channel')
   parser.add_argument('-m',      '--mac',              required=False, default=None,            help='Override local MAC address (default: interfaces MAC)')
   parser.add_argument('-b',      '--accept_broadcast', required=False, default=True,  type=s2b, help='Accept broadcast ESP-NOW messages (default: True)')
   parser.add_argument('-a',      '--accept_all',       required=False, default=False, type=s2b, help='Accept all ESP-NOW messages regardless of destination (default: False)')
@@ -553,6 +589,8 @@ if __name__ == "__main__":
 
   espnow = ESPythoNow(
     interface        = args.interface,
+    channel          = args.channel,
+    set_interface    = args.set_interface,
     mac              = args.mac,
     accept_broadcast = args.accept_broadcast,
     accept_all       = args.accept_all,
