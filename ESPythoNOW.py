@@ -64,18 +64,18 @@ class ESPythoNow:
         print("Error! paho-mqtt missing, MQTT can not be enabled.")
         self.use_mqtt = False
       else:
-        self.mqtt_client_id    = f"ESPythoNOW-{self.local_hw_mac}"
-        self.mqtt_topic_base   = f"ESPythoNOW-{self.local_hw_mac}"
-
-        self.mqtt_topic_send   = self.mqtt_topic_base+"/send"
-        self.mqtt_broker_ip    = self.mqtt_config.get("ip",        None)
-        self.mqtt_broker_port  = self.mqtt_config.get("port",      1883)
-        self.mqtt_username     = self.mqtt_config.get("username",  None)
-        self.mqtt_password     = self.mqtt_config.get("password",  None)
-        self.mqtt_keepalive    = self.mqtt_config.get("keepalive", 60)
-        self.mqtt_publish_raw  = self.mqtt_config.get("raw",       False)
-        self.mqtt_publish_hex  = self.mqtt_config.get("hex",       False)
-        self.mqtt_publish_json = self.mqtt_config.get("json",      False)
+        self.mqtt_client_id     = f"ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_topic_base    = f"ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_topic_send    = self.mqtt_topic_base+"/send"
+        self.mqtt_broker_ip     = self.mqtt_config.get("ip",        None)
+        self.mqtt_broker_port   = self.mqtt_config.get("port",      1883)
+        self.mqtt_username      = self.mqtt_config.get("username",  None)
+        self.mqtt_password      = self.mqtt_config.get("password",  None)
+        self.mqtt_keepalive     = self.mqtt_config.get("keepalive", 60)
+        self.mqtt_publish_raw   = self.mqtt_config.get("raw",       False) # Publish raw bytes
+        self.mqtt_publish_hex   = self.mqtt_config.get("hex",       False) # Publish hex bytes
+        self.mqtt_publish_json  = self.mqtt_config.get("json",      False) # Publish JSON of message, if decoder exists
+        self.mqtt_discard_empty = True                                     # Discard messages with no data
 
         # Ensure that at least hex is published to MQTT
         if not any([self.mqtt_publish_raw, self.mqtt_publish_hex, self.mqtt_publish_json]):
@@ -243,7 +243,7 @@ class ESPythoNow:
         packet        = self.esp_now_send_packet
         packet.load   = plaintext_data
 
-      packet.addr1    = mac
+      packet.addr1    = self.format_mac(mac)
       packet.addr2    = self.local_mac
       packet.SC       = (((packet.SC >> 4) + 1) & 0xFFF) << 4
 
@@ -296,6 +296,11 @@ class ESPythoNow:
   # Experimental support for sending ESP-NOW messages on MQTT receive
   # work in progress
   def mqtt_on_message(self, client, userdata, msg):
+
+    # Discard empty message
+    if self.mqtt_discard_empty and not msg:
+      return
+
     if msg.topic.startswith(self.mqtt_topic_send):
 
       macs = msg.topic.split(self.mqtt_topic_send)[1].split("/")[1:]
@@ -305,8 +310,8 @@ class ESPythoNow:
         return
 
       if len(macs) == 1:
+        print(f"MQTT->ESP-NOW: {macs[0]} - {msg.payload}")
         self.send(macs[0], msg.payload)
-        print(f"Single MAC: {macs[0]}, Data: {msg.payload}")
 
       #elif len(macs) == 2:
       #  print(f"Dual MAC: {macs[0]} -> {macs[1]}, Data: {msg.payload}")
@@ -421,6 +426,11 @@ class ESPythoNow:
 
       # Check to see if using MQTT and publish incoming messages
       if self.use_mqtt and self.mqtt_client.is_connected():
+
+        if self.mqtt_discard_empty and not msg_raw:
+          print("discard")
+          return
+
         if self.mqtt_publish_raw:
           self.mqtt_client.publish(f"{self.mqtt_topic_base}/{from_mac}/{to_mac}/raw", msg_raw, qos=1)
 
@@ -488,13 +498,19 @@ class ESPythoNow:
 
   # Provided MAC matches ESP-NOW BROADCAST address
   def is_broadcast(self, mac):
-    return mac == "FF:FF:FF:FF:FF:FF"
+    return mac.replace(":", "").upper() == "FFFFFFFFFFFF"
 
 
 
-  # Matches AA:BB:CC:DD:EE:FF or AABBCCDDEEFF
+  # Matches formated AA:BB:CC:DD:EE:FF or unformated AABBCCDDEEFF
   def is_valid_mac(self, mac):
     return re.match(r'^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$|^[0-9A-Fa-f]{12}$', mac)
+
+
+
+  # Ensure MAC is formatted like FF:FF:FF:FF:FF:FF
+  def format_mac(self, mac):
+    return ":".join(mac.replace(":", "").upper()[i:i+2] for i in range(0, 12, 2))
 
 
 
