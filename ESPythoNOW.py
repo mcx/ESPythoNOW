@@ -92,17 +92,16 @@ class ESPythoNow:
   # Experimental. Prepare the interface with monitor mode and channel (replaces prep.sh)
   def prep_interface(self, interface, channel):
     print(f"Setting {interface} to monitor mode, and channel {channel}")
-
     methods = [
       [['ip', 'link', 'set', interface, 'down'],
        ['iw', 'dev', interface, 'set', 'type', 'monitor'],
-       ['iw', 'dev', interface, 'set', 'channel', str(channel)],
-       ['ip', 'link', 'set', interface, 'up']],
-      
+       ['ip', 'link', 'set', interface, 'up'],
+       ['iw', 'dev', interface, 'set', 'channel', str(channel)]],
+
       [['ifconfig', interface, 'down'],
        ['iwconfig', interface, 'mode', 'monitor'],
-       ['iwconfig', interface, 'channel', str(channel)],
-       ['ifconfig', interface, 'up']],
+       ['ifconfig', interface, 'up'],
+       ['iwconfig', interface, 'channel', str(channel)]],
     ]
 
     for method in methods:
