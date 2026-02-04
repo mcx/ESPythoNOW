@@ -75,6 +75,7 @@ class ESPythoNow:
         self.mqtt_publish_raw   = self.mqtt_config.get("raw",       False) # Publish raw bytes
         self.mqtt_publish_hex   = self.mqtt_config.get("hex",       False) # Publish hex bytes
         self.mqtt_publish_json  = self.mqtt_config.get("json",      False) # Publish JSON of message, if decoder exists
+        self.mqtt_publish_ack   = self.mqtt_config.get("ack",       False) # Publish any received ACK messages, can loosely be used to check if message has been delivered
         self.mqtt_discard_empty = True                                     # Discard messages with no data
 
         # Ensure that at least hex is published to MQTT
@@ -357,8 +358,13 @@ class ESPythoNow:
       self.delivery_confirmed = True
 
       # Execute RX callback for ACK
-      if self.accept_ack and callable(self.esp_now_rx_callback):
-        self.esp_now_rx_callback(False, to_mac, "ack")
+      if self.accept_ack:
+
+        if callable(self.esp_now_rx_callback):
+          self.esp_now_rx_callback(False, to_mac, "ack")
+
+        if self.use_mqtt and self.mqtt_publish_ack:
+          self.mqtt_client.publish(f"{self.mqtt_topic_base}/ack/{to_mac}", "ack", qos=1)
 
       # Clear delivery confirmation flag
       self.delivery_event.set()
@@ -398,7 +404,7 @@ class ESPythoNow:
         self.recent_rand_values.append(data[4:8])
 
       # Parse message from ESP-NOW packet, v1.0 and v2.0
-      msg_raw  = b''.join([data[15:][i:i + 250] for i in range(0, len(data[15:]), 257)])
+      msg_raw = b''.join([data[15:][i:i + 250] for i in range(0, len(data[15:]), 257)])
 
       # Check if there is a decoder that matches this message
       dec = self.check_decoders(msg_raw)
@@ -587,6 +593,7 @@ if __name__ == "__main__":
   parser.add_argument('-mqraw',  '--mqtt_raw',         required=False, default=False, type=s2b, help='Publish raw bytes to MQTT (default: True)')
   parser.add_argument('-mqhex',  '--mqtt_hex',         required=False, default=True,  type=s2b, help='Publish hex-encoded data to MQTT (default: True)')
   parser.add_argument('-mqjson', '--mqtt_json',        required=False, default=True,  type=s2b, help='Publish JSON-formatted data to MQTT, if decoder exists. (default: True)')
+  parser.add_argument('-mqack',  '--mqtt_ack',         required=False, default=False, type=s2b, help='Publish ACK (messsage received) to confirm message delivery on send (default: False)')
 
   args = parser.parse_args()
 
@@ -599,7 +606,8 @@ if __name__ == "__main__":
       "keepalive": args.mqtt_keepalive,
       "raw":       args.mqtt_raw,
       "hex":       args.mqtt_hex,
-      "json":      args.mqtt_json}
+      "json":      args.mqtt_json,
+      "ack":      args.mqtt_ack}
   else:
     mqtt_config = {}
 
