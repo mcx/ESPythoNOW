@@ -16,8 +16,8 @@ services:
       - ACCEPT_BROADCAST=true
       - ACCEPT_ALL=true
       - ACCEPT_ACK=false
-      #- LMK=a3o4csuv2bpvr0wu
-      #- PMK=0u4hgz7pgct3gnv8
+      #- LMK=a3o4csuv2bpvr0wu # Examples, do not use
+      #- PMK=0u4hgz7pgct3gnv8 # Examples, do not use
       - MQTT_HOST=
       - MQTT_PORT=1883
       - MQTT_USERNAME=
