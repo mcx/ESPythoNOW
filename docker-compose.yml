@@ -1,0 +1,31 @@
+services:
+  espythonow:
+    container_name: espythonow
+    build: .
+    restart: unless-stopped
+    network_mode: host
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      - INTERFACE=wlan1
+      - CHANNEL=8
+      - SET_INTERFACE=true
+      - ACCEPT_BROADCAST=true
+      - ACCEPT_ALL=true
+      - ACCEPT_ACK=false
+      #- LMK=a3o4csuv2bpvr0wu
+      #- PMK=0u4hgz7pgct3gnv8
+      - MQTT_HOST=
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=
+      - MQTT_PASSWORD=
+      - MQTT_KEEPALIVE=60
+      - MQTT_RAW=true
+      - MQTT_HEX=true
+      - MQTT_JSON=true
+    stdin_open: true
+    tty: true
+    command: bash -c "python3 -u /app/ESPythoNOW.py --interface=$$INTERFACE --channel=$$CHANNEL --set_interface=$$SET_INTERFACE --accept_broadcast=$$ACCEPT_BROADCAST --accept_all=$$ACCEPT_ALL --accept_ack=$$ACCEPT_ACK -lmk=$$LMK -pmk=$$PMK --mqtt_host=$$MQTT_HOST --mqtt_port=$$MQTT_PORT --mqtt_username=$$MQTT_USERNAME --mqtt_password=$$MQTT_PASSWORD --mqtt_keepalive=$$MQTT_KEEPALIVE --mqtt_raw=$$MQTT_RAW --mqtt_hex=$$MQTT_HEX --mqtt_json=$$MQTT_JSON"
