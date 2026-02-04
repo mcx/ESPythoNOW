@@ -434,7 +434,6 @@ class ESPythoNow:
       if self.use_mqtt and self.mqtt_client.is_connected():
 
         if self.mqtt_discard_empty and not msg_raw:
-          print("discard")
           return
 
         if self.mqtt_publish_raw:
