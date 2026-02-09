@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "A Python library for sending, receiving, and monitoring ESP-NOW messages on Linux"
 readme = "README.md"
 requires-python = ">=3.7"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "ChuckMash"}
 ]
