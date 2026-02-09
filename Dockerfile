@@ -4,7 +4,7 @@ RUN apk add --no-cache gcc musl-dev libpcap-dev git linux-headers
 
 WORKDIR /app
 
-RUN git clone --depth 1 --branch test https://github.com/ChuckMash/ESPythoNOW.git /tmp/repo && \
+RUN git clone --depth 1 --branch main https://github.com/ChuckMash/ESPythoNOW.git /tmp/repo && \
     cp /tmp/repo/ESPythoNOW.py /tmp/repo/requirements.txt /app/ && \
     rm -rf /tmp/repo
 
