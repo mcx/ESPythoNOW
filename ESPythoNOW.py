@@ -555,7 +555,7 @@ decoders = {
 
 
 
-if __name__ == "__main__":
+def main():
   import argparse
   def s2b(v): return True if v.lower() in ('yes', 'true', 't', 'y', '1') else False
 
@@ -631,3 +631,11 @@ if __name__ == "__main__":
   espnow.start()
 
   input()
+
+
+
+
+
+if __name__ == "__main__":
+  main()
+  
