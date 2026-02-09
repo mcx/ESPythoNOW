@@ -6,6 +6,7 @@ import struct
 import sys
 import json
 import re
+import subprocess
 
 try:
   from Crypto.Cipher import AES
@@ -25,8 +26,14 @@ except:
 
 class ESPythoNow:
 
-  def __init__(self, interface, mac="", callback=None, accept_broadcast=True, accept_all=False, accept_ack=False, block_on_send=False, pmk="", lmk="", decoders={}, mqtt_config={}):
+  def __init__(self, interface, set_interface=False, channel=8, mac="", callback=None, accept_broadcast=True, accept_all=False, accept_ack=False, block_on_send=False, pmk="", lmk="", decoders={}, mqtt_config={}):
+
+    if set_interface and channel:
+      self.prep_interface(interface, channel)
+
     self.interface           = interface                                 # Wireless interface to use
+    self.set_interface       = set_interface                             # Set the interface to monitor mode and channel
+    self.wifi_channel        = channel                                   # Wifi Channel to use, if set_interface
     self.local_mac           = mac.upper() if mac else None              # Local ESP-NOW peer MAC, does not need to match actual hw MAC
     self.esp_now_rx_callback = callback                                  # Callback function to execute on packet RX
     self.accept_broadcast    = accept_broadcast                          # Allow incoming ESP-NOW broadcast packets
@@ -57,18 +64,19 @@ class ESPythoNow:
         print("Error! paho-mqtt missing, MQTT can not be enabled.")
         self.use_mqtt = False
       else:
-        self.mqtt_client_id    = f"ESPythoNOW-{self.local_hw_mac}"
-        self.mqtt_topic_base   = f"ESPythoNOW-{self.local_hw_mac}"
-
-        self.mqtt_topic_send   = self.mqtt_topic_base+"/send"
-        self.mqtt_broker_ip    = self.mqtt_config.get("ip",        None)
-        self.mqtt_broker_port  = self.mqtt_config.get("port",      1883)
-        self.mqtt_username     = self.mqtt_config.get("username",  None)
-        self.mqtt_password     = self.mqtt_config.get("password",  None)
-        self.mqtt_keepalive    = self.mqtt_config.get("keepalive", 60)
-        self.mqtt_publish_raw  = self.mqtt_config.get("raw",       False)
-        self.mqtt_publish_hex  = self.mqtt_config.get("hex",       False)
-        self.mqtt_publish_json = self.mqtt_config.get("json",      False)
+        self.mqtt_client_id     = f"ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_topic_base    = f"ESPythoNOW-{self.local_hw_mac}"
+        self.mqtt_topic_send    = self.mqtt_topic_base+"/send"
+        self.mqtt_broker_ip     = self.mqtt_config.get("ip",        None)
+        self.mqtt_broker_port   = self.mqtt_config.get("port",      1883)
+        self.mqtt_username      = self.mqtt_config.get("username",  None)
+        self.mqtt_password      = self.mqtt_config.get("password",  None)
+        self.mqtt_keepalive     = self.mqtt_config.get("keepalive", 60)
+        self.mqtt_publish_raw   = self.mqtt_config.get("raw",       False) # Publish raw bytes
+        self.mqtt_publish_hex   = self.mqtt_config.get("hex",       False) # Publish hex bytes
+        self.mqtt_publish_json  = self.mqtt_config.get("json",      False) # Publish JSON of message, if decoder exists
+        self.mqtt_publish_ack   = self.mqtt_config.get("ack",       False) # Publish any received ACK messages, can loosely be used to check if message has been delivered
+        self.mqtt_discard_empty = True                                     # Discard messages with no data
 
         # Ensure that at least hex is published to MQTT
         if not any([self.mqtt_publish_raw, self.mqtt_publish_hex, self.mqtt_publish_json]):
@@ -80,6 +88,33 @@ class ESPythoNow:
         else:
           self.use_mqtt = True
 
+
+
+  # Experimental. Prepare the interface with monitor mode and channel (replaces prep.sh)
+  def prep_interface(self, interface, channel):
+    print(f"Setting {interface} to monitor mode, and channel {channel}")
+    methods = [
+      [['ip', 'link', 'set', interface, 'down'],
+       ['iw', 'dev', interface, 'set', 'type', 'monitor'],
+       ['ip', 'link', 'set', interface, 'up'],
+       ['iw', 'dev', interface, 'set', 'channel', str(channel)]],
+
+      [['ifconfig', interface, 'down'],
+       ['iwconfig', interface, 'mode', 'monitor'],
+       ['ifconfig', interface, 'up'],
+       ['iwconfig', interface, 'channel', str(channel)]],
+    ]
+
+    for method in methods:
+      try:
+        for cmd in method:
+          print(cmd)
+          subprocess.run(cmd, check=True)
+        return
+      except:
+        pass
+
+    print("Setting interface failed. Install (net-tools and wireless-tools) or (iproute2 and iw)")
 
 
   # Required tasks prior to sending or receiving
@@ -209,7 +244,7 @@ class ESPythoNow:
         packet        = self.esp_now_send_packet
         packet.load   = plaintext_data
 
-      packet.addr1    = mac
+      packet.addr1    = self.format_mac(mac)
       packet.addr2    = self.local_mac
       packet.SC       = (((packet.SC >> 4) + 1) & 0xFFF) << 4
 
@@ -262,6 +297,11 @@ class ESPythoNow:
   # Experimental support for sending ESP-NOW messages on MQTT receive
   # work in progress
   def mqtt_on_message(self, client, userdata, msg):
+
+    # Discard empty message
+    if self.mqtt_discard_empty and not msg:
+      return
+
     if msg.topic.startswith(self.mqtt_topic_send):
 
       macs = msg.topic.split(self.mqtt_topic_send)[1].split("/")[1:]
@@ -271,8 +311,8 @@ class ESPythoNow:
         return
 
       if len(macs) == 1:
+        print(f"MQTT->ESP-NOW: {macs[0]} - {msg.payload}")
         self.send(macs[0], msg.payload)
-        print(f"Single MAC: {macs[0]}, Data: {msg.payload}")
 
       #elif len(macs) == 2:
       #  print(f"Dual MAC: {macs[0]} -> {macs[1]}, Data: {msg.payload}")
@@ -318,8 +358,13 @@ class ESPythoNow:
       self.delivery_confirmed = True
 
       # Execute RX callback for ACK
-      if self.accept_ack and callable(self.esp_now_rx_callback):
-        self.esp_now_rx_callback(False, to_mac, "ack")
+      if self.accept_ack:
+
+        if callable(self.esp_now_rx_callback):
+          self.esp_now_rx_callback(False, to_mac, "ack")
+
+        if self.use_mqtt and self.mqtt_publish_ack:
+          self.mqtt_client.publish(f"{self.mqtt_topic_base}/ack/{to_mac}", "ack", qos=1)
 
       # Clear delivery confirmation flag
       self.delivery_event.set()
@@ -359,7 +404,7 @@ class ESPythoNow:
         self.recent_rand_values.append(data[4:8])
 
       # Parse message from ESP-NOW packet, v1.0 and v2.0
-      msg_raw  = b''.join([data[15:][i:i + 250] for i in range(0, len(data[15:]), 257)])
+      msg_raw = b''.join([data[15:][i:i + 250] for i in range(0, len(data[15:]), 257)])
 
       # Check if there is a decoder that matches this message
       dec = self.check_decoders(msg_raw)
@@ -387,6 +432,10 @@ class ESPythoNow:
 
       # Check to see if using MQTT and publish incoming messages
       if self.use_mqtt and self.mqtt_client.is_connected():
+
+        if self.mqtt_discard_empty and not msg_raw:
+          return
+
         if self.mqtt_publish_raw:
           self.mqtt_client.publish(f"{self.mqtt_topic_base}/{from_mac}/{to_mac}/raw", msg_raw, qos=1)
 
@@ -454,13 +503,19 @@ class ESPythoNow:
 
   # Provided MAC matches ESP-NOW BROADCAST address
   def is_broadcast(self, mac):
-    return mac == "FF:FF:FF:FF:FF:FF"
+    return mac.replace(":", "").upper() == "FFFFFFFFFFFF"
 
 
 
-  # Matches AA:BB:CC:DD:EE:FF or AABBCCDDEEFF
+  # Matches formated AA:BB:CC:DD:EE:FF or unformated AABBCCDDEEFF
   def is_valid_mac(self, mac):
     return re.match(r'^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$|^[0-9A-Fa-f]{12}$', mac)
+
+
+
+  # Ensure MAC is formatted like FF:FF:FF:FF:FF:FF
+  def format_mac(self, mac):
+    return ":".join(mac.replace(":", "").upper()[i:i+2] for i in range(0, 12, 2))
 
 
 
@@ -500,7 +555,7 @@ decoders = {
 
 
 
-if __name__ == "__main__":
+def main():
   import argparse
   def s2b(v): return True if v.lower() in ('yes', 'true', 't', 'y', '1') else False
 
@@ -520,6 +575,8 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='ESPythoNOW: ESP-NOW for Linux!')
 
   parser.add_argument('-i',      '--interface',        required=True,  default="wlan1",         help='Dedicated wireless interface (e.g., wlan1)')
+  parser.add_argument('-c',      '--channel',          required=False, default=None,            help='Wireless channel to use')
+  parser.add_argument('-s',      '--set_interface',    required=False, default=False, type=s2b, help='ESPythoNOW will try and set monitor mode and channel')
   parser.add_argument('-m',      '--mac',              required=False, default=None,            help='Override local MAC address (default: interfaces MAC)')
   parser.add_argument('-b',      '--accept_broadcast', required=False, default=True,  type=s2b, help='Accept broadcast ESP-NOW messages (default: True)')
   parser.add_argument('-a',      '--accept_all',       required=False, default=False, type=s2b, help='Accept all ESP-NOW messages regardless of destination (default: False)')
@@ -535,6 +592,7 @@ if __name__ == "__main__":
   parser.add_argument('-mqraw',  '--mqtt_raw',         required=False, default=False, type=s2b, help='Publish raw bytes to MQTT (default: True)')
   parser.add_argument('-mqhex',  '--mqtt_hex',         required=False, default=True,  type=s2b, help='Publish hex-encoded data to MQTT (default: True)')
   parser.add_argument('-mqjson', '--mqtt_json',        required=False, default=True,  type=s2b, help='Publish JSON-formatted data to MQTT, if decoder exists. (default: True)')
+  parser.add_argument('-mqack',  '--mqtt_ack',         required=False, default=False, type=s2b, help='Publish ACK (messsage received) to confirm message delivery on send (default: False)')
 
   args = parser.parse_args()
 
@@ -547,12 +605,15 @@ if __name__ == "__main__":
       "keepalive": args.mqtt_keepalive,
       "raw":       args.mqtt_raw,
       "hex":       args.mqtt_hex,
-      "json":      args.mqtt_json}
+      "json":      args.mqtt_json,
+      "ack":      args.mqtt_ack}
   else:
     mqtt_config = {}
 
   espnow = ESPythoNow(
     interface        = args.interface,
+    channel          = args.channel,
+    set_interface    = args.set_interface,
     mac              = args.mac,
     accept_broadcast = args.accept_broadcast,
     accept_all       = args.accept_all,
@@ -570,3 +631,11 @@ if __name__ == "__main__":
   espnow.start()
 
   input()
+
+
+
+
+
+if __name__ == "__main__":
+  main()
+  
