@@ -29,8 +29,8 @@ Homepage = "https://github.com/ChuckMash/ESPythoNOW"
 Repository = "https://github.com/ChuckMash/ESPythoNOW"
 Issues = "https://github.com/ChuckMash/ESPythoNOW/issues"
 
-[project.scripts]
-espythonow = "ESPythoNOW:main"
+#[project.scripts]
+#espythonow = "ESPythoNOW:main"
 
 [tool.setuptools]
 py-modules = ["ESPythoNOW"]
