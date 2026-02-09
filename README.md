@@ -160,7 +160,7 @@ espnow.start()
 How to install with pip and use with sudo (not recommended)
 ---
 ```
-sudo pip install git+https://github.com/ChuckMash/ESPythoNOW.git@test
+sudo pip install git+https://github.com/ChuckMash/ESPythoNOW.git@main
 sudo espythonow -i wlan1
 ```
 
@@ -181,7 +181,7 @@ source venv/bin/activate
 pip3 install --upgrade pip
 
 # Now install from GitHub
-pip3 install git+https://github.com/ChuckMash/ESPythoNOW.git@test
+pip3 install git+https://github.com/ChuckMash/ESPythoNOW.git@main
 
 espythonow -i wlan1
 ```
@@ -192,8 +192,8 @@ How to use with Docker Container
 ```
 
 # Download the docker files from GitHub
-wget -O Dockerfile "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/test/Dockerfile"
-wget -O docker-compose.yml "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/test/docker-compose.yml"
+wget -O Dockerfile "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/main/Dockerfile"
+wget -O docker-compose.yml "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/main/docker-compose.yml"
 
 # Edit docker-compose.yml to customize interface, send/receive settings, MQTT information, etc.
 
