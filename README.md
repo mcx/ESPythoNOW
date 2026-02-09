@@ -156,6 +156,58 @@ espnow.start()
 
 
 
+---
+How to install with pip and use with sudo (not recommended)
+---
+```
+sudo pip install git+https://github.com/ChuckMash/ESPythoNOW.git@test
+sudo espythonow -i wlan1
+```
+
+---
+How to install with venv and setcap
+---
+```
+# Create virtual environment
+python3 -m venv --copies venv
+
+# Add capabilities so can be run without root
+sudo setcap cap_net_raw,cap_net_admin=eip venv/bin/python3
+
+# Activate it
+source venv/bin/activate
+
+# Upgrade pip
+pip3 install --upgrade pip
+
+# Now install from GitHub
+pip3 install git+https://github.com/ChuckMash/ESPythoNOW.git@test
+
+espythonow -i wlan1
+```
+
+---
+How to use with Docker Container
+---
+```
+
+# Download the docker files from GitHub
+wget -O Dockerfile "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/test/Dockerfile"
+wget -O docker-compose.yml "https://raw.githubusercontent.com/ChuckMash/ESPythoNOW/refs/heads/test/docker-compose.yml"
+
+# Edit docker-compose.yml to customize interface, send/receive settings, MQTT information, etc.
+
+# Build the Docker images from the Dockerfile
+docker-compose build #--no-cache
+
+# Start containers in detached mode (background)
+docker-compose up -d
+
+# Follow the logs from the espythonow container
+docker-compose logs -f espythonow
+```
+
+
 
 ---
 NOTE about current state, subject to change or improvements
