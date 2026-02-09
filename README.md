@@ -15,7 +15,7 @@ Linux/Python ESP-NOW library.
 
 
 ---
-Prep the interface and set channel
+Prep the interface and set channel (depreciated)
 ---
 ```
 sudo bash prep.sh wlan1 8
