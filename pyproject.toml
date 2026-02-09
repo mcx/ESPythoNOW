@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "ChuckMash"}
 ]
-keywords = ["espnow", "esp now", "esp-now", "esp8266", "esp32", "iot", "wireless", "networking", "linux", "python"]
+keywords = ["espnow", "esp-now", "esp8266", "esp32", "iot", "wireless", "networking", "linux", "python"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,7 +22,6 @@ classifiers = [
     "Topic :: System :: Networking",
     "Topic :: Communications",
 ]
-
 dynamic = ["dependencies"]
 
 [project.urls]
