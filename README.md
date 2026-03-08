@@ -185,7 +185,7 @@ pip3 install --upgrade pip
 # Now install from GitHub
 pip3 install git+https://github.com/ChuckMash/ESPythoNOW.git@main
 
-espythonow -i wlan1
+espythonow -i wlan1 --set_interface=True --channel=8
 ```
 
 ---
