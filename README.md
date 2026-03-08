@@ -185,7 +185,18 @@ pip3 install --upgrade pip
 # Now install from GitHub
 pip3 install git+https://github.com/ChuckMash/ESPythoNOW.git@main
 
-espythonow -i wlan1 --set_interface=True --channel=8
+# Use ONE of the following methods to set monitor mode and channel
+sudo ifconfig wlan1 down
+sudo iwconfig wlan1 mode monitor
+sudo ifconfig wlan1 up
+sudo iwconfig wlan1 channel 8
+
+#sudo iw dev wlan1 set type monitor
+#sudo ip link set wlan1 up
+#sudo iw dev wlan1 set channel 8
+
+
+espythonow -i wlan1
 ```
 
 ---
